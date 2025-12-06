@@ -18,7 +18,7 @@ int cloudLedState = 0;
 SemaphoreHandle_t xCloudStateSemaphore = NULL;
 // --- KHỞI TẠO BIẾN TASK 1 & 2 ---
 int currentTempState = 0;
-int currentHumidState = 0;
+int currentHumiState = 0;
 SemaphoreHandle_t xSensorStateSemaphore = NULL;
 // Biến giữ chỗ cho TinyML (Luôn false vì chưa làm Task 5)
 float glob_ml_result = 0.0;

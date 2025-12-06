@@ -21,8 +21,9 @@ extern SemaphoreHandle_t xBinarySemaphoreInternet;
 extern int cloudLedState;
 extern SemaphoreHandle_t xCloudStateSemaphore;
 extern int currentTempState;
-extern int currentHumidState;
+extern int currentHumiState;
 //semaphore bao ve 2 bien tren
 extern SemaphoreHandle_t xSensorStateSemaphore;
 extern bool glob_is_anomaly;
+extern float glob_ml_result;
 #endif

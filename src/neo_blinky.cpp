@@ -20,7 +20,7 @@ void neo_blinky(void *pvParameters) {
         // BƯỚC A: Đọc trạng thái độ ẩm an toàn bằng Semaphore
         if (xSensorStateSemaphore != NULL) {
             if (xSemaphoreTake(xSensorStateSemaphore, 100) == pdTRUE) {
-                humiMode = currentHumidState; // Lấy trạng thái từ Task Sensor gửi sang
+                humiMode = currentHumiState; // Lấy trạng thái từ Task Sensor gửi sang
                 xSemaphoreGive(xSensorStateSemaphore);
             }
         }

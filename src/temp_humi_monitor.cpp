@@ -4,36 +4,39 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
+#define SDA_PIN GPIO_NUM_11
+#define SCL_PIN GPIO_NUM_12
 DHT20 dht20;
-// Địa chỉ LCD: 33 (0x21). Nếu không hiện chữ, hãy thử đổi thành 0x27 hoặc 0x3F
 LiquidCrystal_I2C lcd(33, 16, 2); 
 
 void temp_humi_monitor(void *pvParameters) {
-    // --- 1. KHỞI TẠO ---
-    // Dùng hàm begin của DHT20 hỗ trợ ESP32 (SDA=11, SCL=12)
-    dht20.begin(11, 12);
-    
-    // --- SỬA LỖI TẠI ĐÂY ---
-    // Thay lcd.init() bằng lcd.begin() cho đúng thư viện
+    // --- 1. KHỞI TẠO LCD TRƯỚC (QUAN TRỌNG) ---
+    // Để LCD khởi tạo Wire mặc định trước, tránh reset cấu hình của mình
+    Wire.begin(SDA_PIN, SCL_PIN); 
     lcd.begin(); 
-    lcd.backlight(); // Bật đèn nền
+    lcd.backlight();
+    lcd.print("Init Sensor...");
+
+    // --- 2. CẤU HÌNH LẠI I2C CHO ĐÚNG CHÂN ---
+    // Ghi đè cấu hình chân 11, 12 sau khi LCD đã init xong
     
+    
+    // --- 3. KHỞI TẠO DHT20 ---
+    // Lúc này DHT20 sẽ dùng đúng chân 11, 12 mà ta vừa set
+    dht20.begin();
+
     Serial.println("[Sensor] Init Done.");
-    
-    // Đợi cảm biến ổn định
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     while (1) {
-        // --- 2. ĐỌC CẢM BIẾN ---
+        // --- ĐỌC CẢM BIẾN ---
         int status = dht20.read();
         
-        // Kiểm tra lỗi đọc cảm biến
         if (status != DHT20_OK) {
-            Serial.println("DHT20 Read Error!");
-            // Nếu lỗi kết nối, thử khởi tạo lại
-            if (status == DHT20_ERROR_CONNECT) {
-                 dht20.begin(11, 12);
-            }
+            Serial.println("DHT20 Error! Resetting I2C...");
+            // Nếu lỗi, thử reset lại I2C
+            Wire.begin(SDA_PIN, SCL_PIN);
+            dht20.begin();
             vTaskDelay(2000 / portTICK_PERIOD_MS);
             continue;
         }
@@ -41,40 +44,36 @@ void temp_humi_monitor(void *pvParameters) {
         float temp = dht20.getTemperature();
         float humi = dht20.getHumidity();
 
-        // --- 3. CẬP NHẬT DỮ LIỆU CHUNG ---
         glob_temperature = temp;
         glob_humidity = humi;
 
-        // --- 4. LOGIC PHÂN LOẠI (Cho Task 1 & 2) ---
-        int tState = 0; // Mát
-        if (temp >= 30 && temp < 35) tState = 1; // Ấm
-        else if (temp >= 35) tState = 2;         // Nóng
+        // --- LOGIC PHÂN LOẠI ---
+        int tState = 0; 
+        if (temp >= 30 && temp < 35) tState = 1; 
+        else if (temp >= 35) tState = 2;         
 
-        int hState = 0; // Khô
-        if (humi >= 60 && humi < 80) hState = 1; // Đủ
-        else if (humi >= 80) hState = 2;         // Ướt
-
-        // Gửi tín hiệu an toàn bằng Semaphore
+        int hState = 0; 
+        if (humi >= 60 && humi < 80) hState = 1; 
+        else if (humi >= 80) hState = 2;         
+        Serial.printf("Temp: %.1f C, State: %d | Humi: %.1f %%, State: %d\n", temp, tState, humi, hState);
+        // Gửi Semaphore (Đã sửa tên biến currentHumiState)
         if (xSensorStateSemaphore != NULL) {
             if (xSemaphoreTake(xSensorStateSemaphore, 100) == pdTRUE) {
                 currentTempState = tState;
-                currentHumidState = hState;
+                currentHumiState = hState; // Đã sửa từ currentHumidState
                 xSemaphoreGive(xSensorStateSemaphore);
             }
         }
 
-        // --- 5. HIỂN THỊ LCD & SERIAL ---
-        Serial.printf("Humi: %.1f%% - Temp: %.1f C\n", humi, temp);
-        
+        // --- HIỂN THỊ LCD ---
         lcd.setCursor(0, 0);
-        lcd.print("T:"); lcd.print(temp, 1); lcd.print("C H:"); lcd.print(humi, 0); lcd.print("%");
+        lcd.print("T:"); lcd.print(temp, 1); lcd.print(" H:"); lcd.print(humi, 0); lcd.print("%");
         
         lcd.setCursor(0, 1);
-        // Hiển thị trạng thái hoặc cảnh báo AI (nếu có Task 5)
         if (glob_is_anomaly) {
             lcd.print("AI: ANOMALY!    ");
         } else if (tState == 2) {
-            lcd.print("CANH BAO NONG!  ");
+            lcd.print("WARN: HIGH TEMP!");
         } else {
             lcd.print("System Normal   ");
         }

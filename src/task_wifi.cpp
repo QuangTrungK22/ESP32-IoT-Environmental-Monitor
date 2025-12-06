@@ -1,12 +1,11 @@
 #include "task_wifi.h"
 
-void startAP()
-{
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(String(SSID_AP), String(PASS_AP));
-    Serial.print("AP IP: ");
-    Serial.println(WiFi.softAPIP());
-}
+// void startAP()
+//     WiFi.mode(WIFI_AP);
+//     WiFi.softAP(String("Trung"), String("12345678"));
+//     Serial.print("AP IP: ");
+//     Serial.println(WiFi.softAPIP());
+// }
 
 void startSTA()
 {
