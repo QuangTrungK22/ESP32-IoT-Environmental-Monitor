@@ -7,6 +7,12 @@
 //     Serial.println(WiFi.softAPIP());
 // }
 
+/**
+ * @brief Connects to a Wi-Fi network in Station (STA) mode using global credentials.
+ *        If WIFI_SSID is empty, the current FreeRTOS task deletes itself.
+ *        If WIFI_PASS is empty, it connects to an open network.
+ *        Once connected, it gives a binary semaphore to signal internet availability.
+ */
 void startSTA()
 {
     if (WIFI_SSID.isEmpty())
@@ -33,6 +39,13 @@ void startSTA()
     xSemaphoreGive(xBinarySemaphoreInternet);
 }
 
+/**
+ * @brief Checks current Wi-Fi status and reconnects if needed.
+ *        Returns true if already connected; otherwise, triggers reconnection via startSTA().
+ *        Note: startSTA() blocks until connected or deletes the task if SSID is missing.
+ * 
+ * @return true if Wi-Fi is connected, false otherwise.
+ */
 bool Wifi_reconnect()
 {
     const wl_status_t status = WiFi.status();
